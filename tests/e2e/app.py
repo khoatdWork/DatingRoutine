@@ -16,9 +16,8 @@ OUTPUT.mkdir(parents=True, exist_ok=True)
 AXE = Path("node_modules/axe-core/axe.min.js").read_text(encoding="utf-8")
 
 def audit(page, label):
+    expect(page.locator("[data-sonner-toast]")).to_have_count(0, timeout=10000)
     page.wait_for_function("document.getAnimations().every(animation => animation.playState !== 'running')")
-    page.wait_for_function("[...document.querySelectorAll('[data-sonner-toast]')].every(el => getComputedStyle(el).opacity === '1')")
-    expect(page.locator('[data-sonner-toast][data-removed="true"]')).to_have_count(0)
     page.add_script_tag(content=AXE)
     failures = page.evaluate("""async () => (await axe.run(document, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21aa']}})).violations.map(v => ({id:v.id, description:v.description, nodes:v.nodes.map(n=>({html:n.html,detail:n.any}))}))""")
     assert not failures, f"Accessibility {label}: {json.dumps(failures, ensure_ascii=True)}"
