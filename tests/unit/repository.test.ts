@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { emptySnapshot } from "@/modules/notes/core/domain";
-import { readWorkspace, writeWorkspace, storageKey } from "@/modules/notes/data/repository";
+import {
+  readWorkspace,
+  writeWorkspace,
+  storageKey,
+  type WorkspaceOwner,
+} from "@/modules/notes/data/repository";
 import { syncAction } from "@/modules/notes/data/sync-policy";
 let memory: Map<string, string>;
 const storage = {
@@ -13,17 +18,42 @@ beforeEach(() => {
   memory = new Map();
 });
 describe("local persistence and concurrency", () => {
-  it("separates guest and account workspaces", () => {
-    writeWorkspace(
-      storage,
+  it("separates guest, providers, projects, and account IDs", () => {
+    const owners: WorkspaceOwner[] = [
       "guest",
-      0,
-      { ...emptySnapshot(), profile: { displayName: "Khách" } },
-      null,
-      true,
-    );
-    expect(readWorkspace(storage, "uid-a").snapshot.profile.displayName).toBe("");
-    expect(readWorkspace(storage, "guest").snapshot.profile.displayName).toBe("Khách");
+      { provider: "firebase", project: "project-a", uid: "guest" },
+      { provider: "firebase", project: "project-b", uid: "guest" },
+      { provider: "firebase", project: "project-a", uid: "uid-b" },
+      { provider: "supabase", project: "project-a", uid: "guest" },
+    ];
+    owners.forEach((owner, index) => {
+      expect(readWorkspace(storage, owner).localVersion).toBe(0);
+      writeWorkspace(
+        storage,
+        owner,
+        0,
+        { ...emptySnapshot(), profile: { displayName: `Hồ sơ ${index}` } },
+        null,
+        true,
+      );
+    });
+    owners.forEach((owner, index) => {
+      expect(readWorkspace(storage, owner).snapshot.profile.displayName).toBe(`Hồ sơ ${index}`);
+    });
+  });
+  it("does not read an old UID-only workspace into a provider project", () => {
+    const legacyKey = storageKey("guest").replace(/guest$/, "uid-a");
+    const legacyValue = JSON.stringify({
+      localVersion: 1,
+      cloudVersion: 20,
+      dirty: true,
+      snapshot: emptySnapshot(),
+    });
+    storage.setItem(legacyKey, legacyValue);
+    const owner = { provider: "firebase", project: "project-a", uid: "uid-a" } as const;
+    expect(readWorkspace(storage, owner).localVersion).toBe(0);
+    writeWorkspace(storage, owner, 0, emptySnapshot(), null, true);
+    expect(storage.getItem(legacyKey)).toBe(legacyValue);
   });
   it("refuses stale tab writes", () => {
     writeWorkspace(storage, "guest", 0, emptySnapshot(), null, true);

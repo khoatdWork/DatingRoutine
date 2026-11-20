@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { appConfig } from "@/config/app";
+import { dataProvider, dataProviderLabel } from "@/config/services";
 import type { AuthState } from "@/modules/auth/use-auth";
 import type { Workspace } from "@/modules/notes/data/use-workspace";
 import type { usePwa } from "@/modules/pwa/use-pwa";
@@ -54,7 +55,7 @@ export function SettingsMenu({
           key: "account",
           icon: Cloud,
           color: "blue",
-          summary: account || "Trên thiết bị · Firebase tùy chọn",
+          summary: account || dataProviderLabel,
         },
       ],
     },
@@ -234,7 +235,9 @@ export function AccountPanel({
         </span>
         <div>
           <h2>{auth.user?.displayName || "Không gian trên thiết bị"}</h2>
-          <p className="subtitle">{auth.user?.email || "Chưa đăng nhập"}</p>
+          <p className="subtitle">
+            {dataProvider === "local" ? "Lưu trên thiết bị" : auth.user?.email || "Chưa đăng nhập"}
+          </p>
         </div>
       </div>
       <div className="info-notice" role="status">
@@ -245,11 +248,13 @@ export function AccountPanel({
             : auth.user
               ? workspace.state?.dirty
                 ? "Có thay đổi trên thiết bị đang chờ bạn đồng bộ."
-                : "Bản trên thiết bị sẵn sàng. Bấm Đồng bộ để đối chiếu với Firebase."
+                : `Bản trên thiết bị sẵn sàng. Bấm Đồng bộ để đối chiếu với ${dataProviderLabel}.`
               : "Ghi chú được lưu trong trình duyệt này. Xuất bản sao lưu để giữ thêm một bản."}
         </p>
       </div>
-      {auth.configured ? (
+      {dataProvider === "local" ? (
+        <p className="notice">Ứng dụng chỉ lưu dữ liệu trên thiết bị này.</p>
+      ) : auth.configured ? (
         <>
           {auth.user ? (
             <>
@@ -275,7 +280,7 @@ export function AccountPanel({
         </>
       ) : (
         <p className="notice">
-          Firebase chưa được cấu hình cho bản app này. Bạn có thể dùng đầy đủ ghi chú và sao lưu
+          {dataProviderLabel} chưa được cấu hình cho bản app này. Bạn có thể dùng ghi chú và sao lưu
           trên thiết bị.
         </p>
       )}
@@ -396,8 +401,9 @@ export function BackupPanel({
       <div className="danger-zone">
         <h3>Xóa dữ liệu không gian này</h3>
         <p className="help">
-          Xóa hồ sơ và ghi chú trên thiết bị. Nếu đang đăng nhập, thay đổi chỉ lên Firebase khi bạn
-          bấm Đồng bộ.
+          Xóa hồ sơ và ghi chú trên thiết bị.
+          {dataProvider !== "local" &&
+            ` Nếu đang đăng nhập, thay đổi chỉ lên ${dataProviderLabel} khi bạn bấm Đồng bộ.`}
         </p>
         <Button variant="destructive" onClick={reset}>
           Xóa dữ liệu

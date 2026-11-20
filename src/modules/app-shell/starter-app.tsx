@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, House, Layers, LayoutGrid, Settings2, StickyNote } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -14,10 +14,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { appConfig, appRoot } from "@/config/app";
+import { dataProvider, dataProviderLabel } from "@/config/services";
+import { firebaseConfig } from "@/lib/firebase/config";
+import { supabaseUrl } from "@/lib/supabase/config";
 import { useAuth, type AuthState } from "@/modules/auth/use-auth";
 import { usePwa } from "@/modules/pwa/use-pwa";
 import { useWorkspace } from "@/modules/notes/data/use-workspace";
-import { storageKey } from "@/modules/notes/data/repository";
+import { storageKey, type WorkspaceOwner } from "@/modules/notes/data/repository";
 import {
   emptySnapshot,
   MAX_BACKUP_BYTES,
@@ -61,8 +64,24 @@ function download(text: string, filename: string) {
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+function workspaceOwner(uid: string | undefined): WorkspaceOwner {
+  if (!uid) return "guest";
+  if (dataProvider === "firebase" && firebaseConfig.projectId)
+    return { provider: dataProvider, project: firebaseConfig.projectId, uid };
+  if (dataProvider === "supabase" && supabaseUrl) {
+    const url = new URL(supabaseUrl);
+    return {
+      provider: dataProvider,
+      project: `${url.origin}${url.pathname.replace(/\/+$/, "")}`,
+      uid,
+    };
+  }
+  return "guest";
+}
 export function StarterApp() {
   const auth = useAuth();
+  const uid = auth.user?.uid;
+  const owner = useMemo(() => workspaceOwner(uid), [uid]);
   if (!auth.ready)
     return (
       <div className="app-frame loading-screen" role="status">
@@ -70,11 +89,9 @@ export function StarterApp() {
         <p>Đang mở không gian của bạn…</p>
       </div>
     );
-  return (
-    <WorkspaceApp key={auth.user?.uid || "guest"} owner={auth.user?.uid || "guest"} auth={auth} />
-  );
+  return <WorkspaceApp key={storageKey(owner)} owner={owner} auth={auth} />;
 }
-function WorkspaceApp({ owner, auth }: { owner: string; auth: AuthState }) {
+function WorkspaceApp({ owner, auth }: { owner: WorkspaceOwner; auth: AuthState }) {
   const workspace = useWorkspace(owner);
   const pwa = usePwa();
   const [tab, setTab] = useState<Tab>("home");
@@ -366,8 +383,7 @@ function WorkspaceApp({ owner, auth }: { owner: string; auth: AuthState }) {
                         const expected = workspace.state?.localVersion;
                         setConfirm({
                           title: "Tải bản đám mây về thiết bị?",
-                          description:
-                            "Bản Firebase sẽ thay thế hồ sơ và ghi chú trên thiết bị, kể cả thay đổi chưa đồng bộ. Hãy xuất bản sao lưu hiện tại trước khi tiếp tục.",
+                          description: `Bản trên ${dataProviderLabel} sẽ thay thế hồ sơ và ghi chú trên thiết bị, kể cả thay đổi chưa đồng bộ. Hãy xuất bản sao lưu hiện tại trước khi tiếp tục.`,
                           label: "Tải bản đám mây",
                           action: () => {
                             void workspace.sync(true, expected);

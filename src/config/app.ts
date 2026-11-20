@@ -1,10 +1,11 @@
-// Change branding here when starting a new project.
+import project from "../../project.config.json";
+// Setup supplies the project name and unique namespace; customize remaining branding here.
 export const appConfig = {
-  name: "Starter",
-  fullName: "Starter · Web & Mobile",
+  name: project.appName || "Starter",
+  fullName: `${project.appName || "Starter"} · Web & Mobile`,
   description: "Không gian nhỏ cho những ý tưởng và công việc mỗi ngày.",
   version: "1.0.0",
-  storageKey: "starter-pwa-v1",
+  storageKey: project.storageKey || "starter-pwa-v1",
   themeColor: "#2257c7",
   backgroundColor: "#f4f7fb",
   locale: "vi-VN",

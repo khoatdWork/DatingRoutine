@@ -2,6 +2,8 @@
 
 Tham chiếu trực tiếp WorkingTimeTracking: app cá nhân ưu tiên mobile, không gian tập trung vào một hành động mỗi màn hình.
 
+Trước khi chạy dự án, người tạo dùng CLI `npm run setup` để chọn tên, namespace, dịch vụ dữ liệu và hosting độc lập. Đây là cấu hình dự án được lưu và commit, không thêm bước chọn hạ tầng vào màn hình người dùng app. Giao diện Tài khoản hiển thị đúng chế độ local hoặc dịch vụ đã chọn; thiếu env hiển thị trạng thái rõ ràng và vẫn giữ guest local.
+
 - Màu sáng: nền #F4F7FB; surface #FFFFFF; chữ #152B46; phụ #53657B; primary #2257C7; border #D8E1EC. Success #087561 và warning #965100 luôn có nhãn chữ.
 - Màu tối: nền #111E30; surface #1A2A40; chữ #E6EDF7; phụ #A9BBD1; primary #8FB4FF; border #344860. Chọn theme qua next-themes, lưu riêng từng app.
 - Be Vietnam Pro tự host; body 14px, tiêu đề 26px, nội dung phụ 11–12px. Trường nhập 16px để tránh iOS tự zoom.

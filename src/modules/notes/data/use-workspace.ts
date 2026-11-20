@@ -1,13 +1,20 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { readWorkspace, writeWorkspace, storageKey, type Envelope } from "./repository";
+import {
+  readWorkspace,
+  writeWorkspace,
+  storageKey,
+  type Envelope,
+  type WorkspaceOwner,
+} from "./repository";
 import { emptySnapshot, type Snapshot } from "../core/domain";
 import { syncAction } from "./sync-policy";
 import { appConfig } from "@/config/app";
+import { dataProvider, dataProviderLabel } from "@/config/services";
 function message(error: unknown) {
   return error instanceof Error ? error.message : "Thao tác chưa hoàn tất. Hãy thử lại.";
 }
-export function useWorkspace(owner: string) {
+export function useWorkspace(owner: WorkspaceOwner) {
   const [state, setState] = useState<Envelope | null>(null);
   const stateRef = useRef<Envelope | null>(null);
   const [error, setError] = useState("");
@@ -46,7 +53,7 @@ export function useWorkspace(owner: string) {
         expected,
         snapshot,
         stateRef.current.cloudVersion,
-        true,
+        owner !== "guest",
       );
       accept(next);
       setError("");
@@ -58,7 +65,13 @@ export function useWorkspace(owner: string) {
     }
   }
   async function sync(pullOnly = false, expected?: number) {
-    if (owner === "guest" || busyRef.current || !stateRef.current) return false;
+    if (
+      owner === "guest" ||
+      owner.provider !== dataProvider ||
+      busyRef.current ||
+      !stateRef.current
+    )
+      return false;
     busyRef.current = true;
     setBusy(true);
     setSyncStatus("");
@@ -75,7 +88,7 @@ export function useWorkspace(owner: string) {
         throw new Error("Dữ liệu vừa thay đổi. Hãy kiểm tra rồi xác nhận lại.");
       }
       const { readCloud, writeCloud } = await import("./cloud");
-      const remote = await readCloud(owner);
+      const remote = await readCloud(owner.uid);
       const action = pullOnly ? "pull" : syncAction(local, remote?.version ?? null);
       if (action === "conflict")
         throw new Error(
@@ -85,7 +98,7 @@ export function useWorkspace(owner: string) {
         // Check other tabs again before sending. Transaction checks the cloud version.
         if (readWorkspace(localStorage, owner).localVersion !== local.localVersion)
           throw new Error("Cửa sổ khác vừa sửa dữ liệu. Hãy đồng bộ lại.");
-        const version = await writeCloud(owner, remote?.version ?? 0, local.snapshot);
+        const version = await writeCloud(owner.uid, remote?.version ?? 0, local.snapshot);
         accept(
           writeWorkspace(localStorage, owner, local.localVersion, local.snapshot, version, false),
         );
@@ -104,7 +117,7 @@ export function useWorkspace(owner: string) {
         );
       }
       setSyncStatus(
-        `Đã được Firebase xác nhận lúc ${new Intl.DateTimeFormat(appConfig.locale, { hour: "2-digit", minute: "2-digit", timeZone: appConfig.timeZone }).format(new Date())}.`,
+        `Đã được ${dataProviderLabel} xác nhận lúc ${new Intl.DateTimeFormat(appConfig.locale, { hour: "2-digit", minute: "2-digit", timeZone: appConfig.timeZone }).format(new Date())}.`,
       );
       return true;
     } catch (cause) {

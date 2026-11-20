@@ -1,4 +1,6 @@
 import type { NextConfig } from "next";
+import { readProjectConfig } from "./scripts/project-config.mjs";
+readProjectConfig();
 const nextConfig: NextConfig = {
   output: "export",
   trailingSlash: true,

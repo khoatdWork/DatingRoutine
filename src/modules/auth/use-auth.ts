@@ -1,28 +1,23 @@
 "use client";
 import { useEffect, useState } from "react";
-import {
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signInWithPopup,
-  signOut,
-  type User,
-} from "firebase/auth";
-import { firebaseClients, firebaseConfigured } from "@/lib/firebase/client";
+import { dataProvider } from "@/config/services";
+import { authConfigured, loadAuthProvider, type AccountUser } from "./provider";
+
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [ready, setReady] = useState(!firebaseConfigured);
+  const [user, setUser] = useState<AccountUser | null>(null);
+  const [ready, setReady] = useState(!authConfigured);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
   useEffect(() => {
-    if (!firebaseConfigured) return;
+    if (!authConfigured) return;
     let unsubscribe: (() => void) | undefined;
     let disposed = false;
-    // Firebase initialization can fail; deliver all state changes asynchronously.
-    void Promise.resolve()
-      .then(() => {
+
+    void loadAuthProvider()
+      .then((provider) => {
         if (disposed) return;
-        unsubscribe = onAuthStateChanged(
-          firebaseClients().auth,
+        unsubscribe = provider.subscribe(
           (next) => {
             setUser(next);
             setReady(true);
@@ -36,31 +31,37 @@ export function useAuth() {
       })
       .catch(() => {
         if (!disposed) {
-          setError("Không khởi tạo được Firebase. Hãy kiểm tra cấu hình ứng dụng.");
+          setError("Không khởi tạo được đăng nhập. Hãy kiểm tra cấu hình ứng dụng.");
           setReady(true);
         }
       });
+
     return () => {
       disposed = true;
       unsubscribe?.();
     };
   }, []);
+
   async function authenticate(logout = false) {
+    if (!authConfigured) return;
     setBusy(true);
     setError("");
     try {
-      if (logout) await signOut(firebaseClients().auth);
-      else await signInWithPopup(firebaseClients().auth, new GoogleAuthProvider());
+      const provider = await loadAuthProvider();
+      if (logout) await provider.signOut();
+      else await provider.signIn();
     } catch {
-      setError(
-        logout
-          ? "Chưa đăng xuất được. Hãy thử lại."
-          : "Chưa đăng nhập được. Cho phép cửa sổ bật lên và thử lại khi có mạng.",
-      );
+      const loginError =
+        dataProvider === "firebase"
+          ? "Chưa đăng nhập được. Cho phép cửa sổ bật lên và thử lại khi có mạng."
+          : "Chưa đăng nhập được. Hãy kiểm tra kết nối mạng rồi thử lại.";
+      setError(logout ? "Chưa đăng xuất được. Hãy thử lại." : loginError);
     } finally {
       setBusy(false);
     }
   }
-  return { user, ready, busy, error, configured: firebaseConfigured, authenticate };
+
+  return { user, ready, busy, error, configured: authConfigured, authenticate };
 }
+
 export type AuthState = ReturnType<typeof useAuth>;

@@ -1,32 +1,16 @@
-import { doc, getDocFromServer, runTransaction, serverTimestamp } from "firebase/firestore";
-import { firebaseClients } from "@/lib/firebase/client";
-import { validateSnapshot, type Snapshot } from "../core/domain";
-export async function readCloud(uid: string) {
-  const result = await getDocFromServer(
-    doc(firebaseClients().db, "users", uid, "workspaces", "default"),
-  );
-  if (!result.exists()) return null;
-  const data = result.data();
-  if (!Number.isSafeInteger(data.version) || data.version < 1)
-    throw new Error("Phiên bản trên đám mây không hợp lệ.");
-  return { version: data.version as number, snapshot: validateSnapshot(data.snapshot) };
+import { dataProvider } from "@/config/services";
+import type { Snapshot } from "../core/domain";
+
+async function cloudAdapter() {
+  if (dataProvider === "firebase") return import("./firebase-cloud");
+  if (dataProvider === "supabase") return import("./supabase-cloud");
+  throw new Error("Chế độ lưu trên thiết bị không có đồng bộ đám mây.");
 }
+
+export async function readCloud(uid: string) {
+  return (await cloudAdapter()).readCloud(uid);
+}
+
 export async function writeCloud(uid: string, expectedVersion: number, snapshot: Snapshot) {
-  const { db } = firebaseClients();
-  const ref = doc(db, "users", uid, "workspaces", "default");
-  const clean = validateSnapshot(snapshot);
-  return runTransaction(db, async (transaction) => {
-    const current = await transaction.get(ref);
-    const version: unknown = current.exists() ? current.data().version : 0;
-    if (version !== expectedVersion)
-      throw new Error(
-        "Đám mây đã thay đổi. Hãy sao lưu thiết bị rồi tải bản đám mây để đối chiếu.",
-      );
-    transaction.set(ref, {
-      version: expectedVersion + 1,
-      snapshot: clean,
-      updatedAt: serverTimestamp(),
-    });
-    return expectedVersion + 1;
-  });
+  return (await cloudAdapter()).writeCloud(uid, expectedVersion, snapshot);
 }

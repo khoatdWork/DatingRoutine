@@ -19,10 +19,18 @@ jobs:
           node-version: 26.4.0
           cache: npm
       - run: npm ci
+      - name: Configure a fresh template for CI
+        run: |
+          if node --input-type=module -e 'import { readFileSync } from "node:fs"; const config = JSON.parse(readFileSync("project.config.json", "utf8")); process.exitCode = config.schemaVersion === 1 && config.appName === null && config.storageKey === null && config.dataProvider === null && config.hostingProvider === null ? 0 : 1'; then
+            npm run setup -- --data local --hosting static --name 'Template verification'
+          fi
+          node scripts/check-project.mjs
       - run: npm run lint
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm run test:unit
+      - run: npm run test:setup
+      - run: npm run test:db:supabase
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -44,3 +52,25 @@ jobs:
           name: browser-evidence
           path: output/screenshots/
           retention-days: 7
+  supabase-browser:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://template-test.supabase.invalid
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_mock_test
+      NEXT_PUBLIC_BASE_PATH: /template-test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.4.0
+          cache: npm
+      - run: npm ci
+      - name: Configure isolated Supabase browser fixture
+        run: npm run setup -- --data supabase --hosting static --name 'Supabase browser fixture' --storage-key template-supabase-ci-v1 --yes
+      - run: npm run build
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: pip install -r requirements-dev.txt
+      - run: python -m playwright install --with-deps chromium
+      - run: npm run test:e2e:supabase

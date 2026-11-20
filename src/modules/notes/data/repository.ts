@@ -7,10 +7,16 @@ export interface Envelope {
   snapshot: Snapshot;
 }
 export type StorageDriver = Pick<Storage, "getItem" | "setItem">;
-export function storageKey(owner: string) {
-  return `${appConfig.storageKey}:workspace:${owner}`;
+export type WorkspaceOwner =
+  | "guest"
+  | { provider: "firebase" | "supabase"; project: string; uid: string };
+
+export function storageKey(owner: WorkspaceOwner) {
+  if (owner === "guest") return `${appConfig.storageKey}:workspace:guest`;
+  const { provider, project, uid } = owner;
+  return `${appConfig.storageKey}:workspace-v2:${JSON.stringify([provider, project, uid])}`;
 }
-export function readWorkspace(storage: StorageDriver, owner: string): Envelope {
+export function readWorkspace(storage: StorageDriver, owner: WorkspaceOwner): Envelope {
   const raw = storage.getItem(storageKey(owner));
   if (raw === null)
     return { localVersion: 0, cloudVersion: null, dirty: false, snapshot: emptySnapshot() };
@@ -40,7 +46,7 @@ export function readWorkspace(storage: StorageDriver, owner: string): Envelope {
 }
 export function writeWorkspace(
   storage: StorageDriver,
-  owner: string,
+  owner: WorkspaceOwner,
   expected: number,
   snapshot: Snapshot,
   cloudVersion: number | null,

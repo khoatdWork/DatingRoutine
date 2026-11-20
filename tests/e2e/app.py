@@ -1,10 +1,16 @@
 import json
 import os
 from pathlib import Path
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 from playwright.sync_api import sync_playwright, expect
 
 URL = os.environ.get("E2E_URL", "http://127.0.0.1:4173/")
+DATA_PROVIDER = os.environ.get("E2E_DATA_PROVIDER", "local")
+ACCOUNT_NOTICE = {
+    "local": "Ứng dụng chỉ lưu dữ liệu trên thiết bị này.",
+    "firebase": "Firebase chưa được cấu hình",
+    "supabase": "Supabase chưa được cấu hình",
+}
 OUTPUT = Path("output/screenshots")
 OUTPUT.mkdir(parents=True, exist_ok=True)
 AXE = Path("node_modules/axe-core/axe.min.js").read_text(encoding="utf-8")
@@ -24,6 +30,15 @@ def run(browser, engine):
     context = browser.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=1)
     page = context.new_page()
     errors = []
+    external_requests = []
+    app_url = urlsplit(URL)
+
+    def record_external_request(request):
+        remote = urlsplit(request.url)
+        if remote.scheme in ("http", "https") and remote.netloc != app_url.netloc:
+            external_requests.append(remote.hostname)
+
+    context.on("request", record_external_request)
     page.on("pageerror", lambda error: errors.append(str(error)))
     page.goto(URL)
     page.wait_for_load_state("networkidle")
@@ -96,7 +111,9 @@ def run(browser, engine):
     nav(page, "Cài đặt")
     audit(page, f"{engine} settings 320")
     page.get_by_role("button", name="Tài khoản & đồng bộ", exact=True).click()
-    expect(page.get_by_text("Firebase chưa được cấu hình", exact=False)).to_be_visible()
+    expect(page.get_by_text(ACCOUNT_NOTICE[DATA_PROVIDER], exact=False)).to_be_visible()
+    expect(page.get_by_role("button", name="Đăng nhập với Google")).to_have_count(0)
+    expect(page.get_by_role("button", name="Đồng bộ ngay")).to_have_count(0)
     audit(page, f"{engine} account 320")
     page.screenshot(path=str(OUTPUT / f"{engine}-account-320.png"), full_page=True)
     # Isolate stale editors across real tabs, not a mocked repository.
@@ -141,6 +158,7 @@ def run(browser, engine):
         cached = page.evaluate("async () => (await Promise.all((await caches.keys()).map(async k => (await (await caches.open(k)).keys()).map(r=>r.url)))).flat()")
         assert not any("firestore" in url or "googleapis.com" in url for url in cached)
     assert not errors, f"Browser runtime errors: {errors}"
+    assert not external_requests, f"Unexpected external requests: {external_requests}"
     context.close()
     print(f"PASS {engine}: CRUD, drafts, persistence, filters, theme, backup, stale tabs, a11y, responsive, manifest" + (", offline PWA" if engine == "chromium" else ""), flush=True)
 
