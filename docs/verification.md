@@ -25,7 +25,9 @@
 
 ## CI
 
-Workflow Verify template chạy cùng lint/type/unit/rules/browser trên Ubuntu, build với base path `/template-test` để kiểm sử dụng dưới đường dẫn con. Kết quả run xem tab Actions của repository.
+Workflow Verify template chạy cùng lint/type/unit/rules/browser trên Ubuntu, build với base path `/template-test` để kiểm sử dụng dưới đường dẫn con.
+
+**PASS toàn bộ** tại [GitHub Actions run 44713034699](https://github.com/khoatdWork/Web-Mobile-App-PWA-Template/actions/runs/44713034699), source commit `adb59824e75e3369321b3a7576f368fbd19b40a8`. Chromium/WebKit, 18 unit test, 3 rules test và build dưới đường dẫn con đều thành công. Phần cập nhật sau commit này chỉ gồm tài liệu và ảnh minh họa Cài đặt.
 
 ## Giới hạn đã biết
 

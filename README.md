@@ -31,12 +31,12 @@ Mở [localhost:3000](http://localhost:3000). Không cần Firebase để chạy
 
 ## Đã có sẵn
 
-- Khung mobile320–430px, tối đa480px trên desktop, bottom navigation, safe area iOS và font Be Vietnam Pro tự host.
+- Khung mobile 320–430px, tối đa 480px trên desktop, bottom navigation, safe area iOS và font Be Vietnam Pro tự host.
 - Theme sáng/tối/theo hệ thống, hồ sơ, danh sách Cài đặt theo nhóm.
 - Module ghi chú: tạo/sửa/xóa, ý tưởng/công việc, hoàn tất, tìm kiếm, bộ lọc và lưu trên thiết bị.
 - shadcn/Radix: Button, Input, Textarea, Label, Badge, Tabs, AlertDialog; toast Sonner và trang trưng bày tương tác.
 - Giữ nháp khi lưu lỗi; xác nhận khi bỏ nháp/xóa/nhập/cập nhật; phát hiện bản sửa cũ ở nhiều cửa sổ.
-- Sao lưu JSON có kiểm schema, kích thước<=1MB, tối đa500ghi chú; khôi phục lỗi không âm thầm reset dữ liệu gốc.
+- Sao lưu JSON có kiểm schema, kích thước ≤ 1 MB, tối đa 500 ghi chú; khôi phục lỗi không âm thầm reset dữ liệu gốc.
 - Google Auth và Firestore owner-only, namespace theo uid, transaction kiểm version; chủ động bấm Đồng bộ, không tự ghi đè khi xung đột.
 - Manifest, SVG/PNG/maskable/Apple icons, cache phiên bản theo nội dung build, dùng offline và cập nhật có xác nhận.
 - Static export hỗ trợ đường dẫn con GitHub Pages; CI kiểm lint/types/unit/rules/browser và workflow triển khai Pages tùy chọn.
