@@ -45,7 +45,7 @@ jobs:
   supabase-browser:
     runs-on: ubuntu-latest
     env:
-      NEXT_PUBLIC_SUPABASE_URL: https://DatingRoutine.supabase.invalid
+      NEXT_PUBLIC_SUPABASE_URL: https://template-test.supabase.invalid
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_mock_test
       NEXT_PUBLIC_BASE_PATH: /DatingRoutine
     steps:

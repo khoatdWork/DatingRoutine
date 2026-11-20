@@ -26,7 +26,7 @@ Browser fixture và ảnh chụp nằm ở `output/`, không commit. API giả k
 
 Repo public `khoatdWork/DatingRoutine` đã tạo riêng từ template; remote `template` giữ URL gốc. Pages chọn source GitHub Actions, HTTPS, URL `https://khoatdwork.github.io/DatingRoutine/`.
 
-Workflow Deploy GitHub Pages chạy trên push main, kiểm lint/types/unit/setup/SQL rồi build theo repo base path. Verify DatingRoutine kiểm format và Chromium/WebKit, thêm job Supabase/Cloudinary mock độc lập. Kết quả workflow thực được cập nhật sau lần push đầu.
+Workflow Deploy GitHub Pages chạy trên push main, kiểm lint/types/unit/setup/SQL rồi build theo repo base path. Verify DatingRoutine kiểm format và Chromium/WebKit, thêm job Supabase/Cloudinary mock độc lập. Lần deploy đầu thành công: [Deploy GitHub Pages 44808168551](https://github.com/khoatdWork/DatingRoutine/actions/runs/44808168551), commit `4cdd39a`. Kiểm Chromium trên URL thật trả HTTP 200, tạo/lưu chuyến đi qua reload, manifest scope `/DatingRoutine/`, service worker asset và không có lỗi JavaScript. CI mock lần đầu phát hiện URL fixture viết hoa host làm lệch khóa phiên giả; đã sửa về host chữ thường, không đổi mã ứng dụng.
 
 ## Giới hạn thực
 
