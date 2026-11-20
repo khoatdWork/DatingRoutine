@@ -1,5 +1,5 @@
 {
-  "name": "web-mobile-pwa-template",
+  "name": "dating-routine",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -17,7 +17,7 @@
     "test:unit": "vitest run tests/unit",
     "test:setup": "node --test tests/setup/*.test.mjs",
     "test:db": "firebase emulators:exec --only firestore --project demo-pwa-template \"vitest run tests/database/rules.test.ts\"",
-    "test:db:supabase": "vitest run tests/database/supabase.test.ts",
+    "test:db:supabase": "vitest run tests/database/supabase.test.ts tests/database/trips-supabase.test.ts",
     "test:e2e": "node scripts/e2e.mjs",
     "test:e2e:supabase": "node scripts/e2e.mjs --supabase",
     "verify": "npm run project:check && npm run lint && npm run typecheck && npm run test:unit && npm run test:setup && npm run test:db:supabase && npm run build",

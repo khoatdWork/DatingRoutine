@@ -1,115 +1,84 @@
-# Web Mobile App PWA Template
+# Đi cùng nhau
 
-Template tiếng Việt dùng lại cho app cá nhân, dựa trên cấu trúc và giao diện [WorkingTimeTracking](https://github.com/khoatdWork/WorkingTimeTracking). Next.js App Router + React + TypeScript strict + shadcn/ui; xuất website tĩnh và cài như PWA. Người tạo dự án phải chọn dịch vụ dữ liệu và hosting trước khi chạy app.
+Cuốn nhật ký chuyến đi của hai đứa: lưu những nơi đã đến, ảnh kỷ niệm, ghi chú và từng khoản chi. Tạo từ [Web Mobile App PWA Template](https://github.com/khoatdWork/Web-Mobile-App-PWA-Template).
 
-<p>
-  <img src="docs/screenshots/home.png" alt="Trang chủ Starter" width="230" />
-  <img src="docs/screenshots/settings.png" alt="Cài đặt theo nhóm" width="230" />
-  <img src="docs/screenshots/dark.png" alt="Chế độ tối" width="230" />
-</p>
+- **App:** https://khoatdwork.github.io/DatingRoutine/
+- **Mã nguồn:** https://github.com/khoatdWork/DatingRoutine
+- Next.js App Router, React, TypeScript strict, shadcn/Radix, Be Vietnam Pro, PWA static export.
+- **Dữ liệu:** Supabase PostgreSQL + Google Auth. **Ảnh:** Cloudinary qua Supabase Edge Function. **Deploy:** GitHub Actions → GitHub Pages.
 
-## Bắt đầu
+## Có thể làm gì?
 
-Yêu cầu Node **26.4.x**, npm **11.17.0** (theo `.nvmrc` và `package.json`).
+- Tạo, sửa, tìm và lọc chuyến đi theo năm; lưu địa điểm, ngày đi/về, cảm xúc và ghi chú.
+- Thêm album ảnh, chú thích, xem ảnh lớn; tối đa 30 ảnh/chuyến, JPEG/PNG/WebP tối đa 8 MiB/ảnh.
+- Ghi chi phí bằng VND: di chuyển (vé máy bay, taxi…), ăn uống, lưu trú, vé, mua sắm và khoản khác. Đánh dấu Mình / Bạn ấy / Cả hai trả; tổng hợp theo chuyến, hạng mục và người trả.
+- Dùng trên thiết bị khi chưa đăng nhập, đọc/ghi chuyến đi offline sau lần mở có mạng. Ảnh cần mạng và tài khoản đã cấu hình.
+- Lưu local trước, chủ động đồng bộ Supabase, kiểm phiên bản để chặn ghi đè khi xung đột.
+- Giao diện sáng/tối/theo thiết bị, cài ra màn hình chính, sao lưu/khôi phục JSON có xác nhận.
+
+## Chạy trên máy
+
+Node **26.4.x**, npm **11.17.0**.
 
 ```powershell
 npm ci
-npm run setup
 npm run dev
 ```
 
-Setup hỏi tên app và hai lựa chọn độc lập:
+Mở http://localhost:3000. `project.config.json` đã chọn **Supabase** và **GitHub Pages**, namespace riêng `dating-routine-v1`. Không cần chạy lại setup. Khi chưa cấu hình Supabase, app vẫn cho ghi chuyến đi, chi phí và xuất sao lưu trong trình duyệt. Không có dữ liệu mẫu được lưu sẵn.
 
-| Nhóm    | Các lựa chọn                                                                                   |
-| ------- | ---------------------------------------------------------------------------------------------- |
-| Dữ liệu | Local (trên thiết bị), Firebase (Google Auth + Firestore), Supabase (Google Auth + PostgreSQL) |
-| Hosting | Cloudflare Pages, GitHub Pages, Firebase Hosting, host tĩnh khác                               |
+## Thiết lập dịch vụ lần đầu
 
-Ví dụ Supabase + Cloudflare Pages hoặc Firebase + GitHub Pages đều hợp lệ. Lựa chọn lưu trong `project.config.json` để commit cùng dự án; setup tạo namespace storage riêng. `dev`, `build`, `start` và Next config chặn nếu chưa thiết lập. Người dùng app không cần chọn hạ tầng mỗi lần mở.
+1. [Tạo Supabase, schema và đăng nhập Google](docs/supabase.md).
+2. [Tạo Cloudinary và deploy hàm tải ảnh](docs/cloudinary.md).
+3. Trong [GitHub Actions Variables](https://github.com/khoatdWork/DatingRoutine/settings/variables/actions), thêm `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+4. Push lên `main`, hoặc chạy **Deploy GitHub Pages** trong Actions để build lại.
 
-Chọn Firebase/Supabase thì sao chép `.env.example` thành `.env.local`, điền cấu hình public theo [Firebase](docs/firebase.md) hoặc [Supabase](docs/supabase.md). Khi thiếu cấu hình, app hiển thị rõ dịch vụ chưa được cấu hình và vẫn cho dùng guest local. Chế độ Local không khởi tạo SDK hay gọi dịch vụ cloud.
+Trên máy, copy `.env.example` thành `.env.local`, điền hai biến Supabase rồi chạy lại dev/build. API Secret Cloudinary chỉ đặt trong Supabase Edge Function secrets. Không đặt Cloudinary secret hoặc Supabase service*role trong biến `NEXT_PUBLIC*\*`, repository hoặc GitHub Pages.
 
-Mở [localhost:3000](http://localhost:3000). Dữ liệu mặc định trống, không sao chép dữ liệu hoặc tài khoản từ app gốc. Có thể setup không tương tác:
+## Deploy tự động
 
-```powershell
-npm run setup -- --name "Ghi chú" --data supabase --hosting cloudflare
-```
-
-Chạy lại setup để đổi lựa chọn phải xác nhận; với CLI không tương tác, thêm `--yes` sau khi xem cấu hình mới. Namespace giữ nguyên khi đổi dịch vụ, trừ khi chỉ định `--storage-key`. Dữ liệu cloud/tài khoản không tự chuyển dịch vụ; xuất bản sao lưu và nhập có xác nhận trong đúng không gian đích.
-
-## Dùng cho dự án mới
-
-1. Trên GitHub, chọn **Use this template → Create a new repository**. Hoặc chạy `gh repo create TEN-APP --template khoatdWork/Web-Mobile-App-PWA-Template --private --clone`.
-2. Chạy `npm ci`, `npm run setup` để chọn tên, dữ liệu và hosting. Commit `project.config.json` của dự án mới. Nếu sao chép từ một app đã setup, chạy setup với `--storage-key` mới để tách dữ liệu app mới. Đổi tên package trong `package.json`, chạy `npm install --package-lock-only`.
-3. Sửa mô tả, phiên bản, màu và múi giờ trong `src/config/app.ts`; tên/namespace lấy từ cấu hình setup. Đổi màu tương ứng trong `src/app/globals.css` và `public/icon.svg`, rồi `npm run icons`.
-4. Đổi module ví dụ `src/modules/notes` thành nghiệp vụ mới; cập nhật bốn tab ở `src/modules/app-shell/starter-app.tsx`. Có thể bỏ tab Thành phần sau khi tham khảo UI.
-5. Nếu chọn tài khoản/cloud, tạo project riêng theo [Firebase](docs/firebase.md) hoặc [Supabase](docs/supabase.md). Chọn hosting theo [hướng dẫn triển khai](docs/hosting.md). Không dùng cấu hình hoặc dữ liệu WorkingTimeTracking.
-6. Chạy `npm run verify`, `npm run test:e2e` và kiểm tra cấu hình trước khi triển khai.
-
-## Đã có sẵn
-
-- Khung mobile 320–430px, tối đa 480px trên desktop, bottom navigation, safe area iOS và font Be Vietnam Pro tự host.
-- Theme sáng/tối/theo hệ thống, hồ sơ, danh sách Cài đặt theo nhóm.
-- Module ghi chú: tạo/sửa/xóa, ý tưởng/công việc, hoàn tất, tìm kiếm, bộ lọc và lưu trên thiết bị.
-- shadcn/Radix: Button, Input, Textarea, Label, Badge, Tabs, AlertDialog; toast Sonner và trang trưng bày tương tác.
-- Giữ nháp khi lưu lỗi; xác nhận khi bỏ nháp/xóa/nhập/cập nhật; phát hiện bản sửa cũ ở nhiều cửa sổ.
-- Sao lưu JSON có kiểm schema, kích thước ≤ 1 MB, tối đa 500 ghi chú; khôi phục lỗi không âm thầm reset dữ liệu gốc.
-- Auth/cloud theo adapter Firebase hoặc Supabase. Firebase dùng Google popup + Firestore transaction; Supabase dùng Google OAuth PKCE + PostgreSQL RPC/RLS owner-only. Namespace theo dịch vụ/project/uid, kiểm version và đồng bộ chủ động; không tự ghi đè khi xung đột.
-- Manifest, SVG/PNG/maskable/Apple icons, cache phiên bản theo nội dung build, dùng offline và cập nhật có xác nhận.
-- Bước setup bắt buộc, dữ liệu/hosting độc lập. Static export cho Cloudflare Pages, GitHub Pages, Firebase Hosting hoặc host tĩnh khác. CI kiểm lint/types/setup/unit/quyền/browser; workflow Pages kiểm đúng lựa chọn hosting trước khi triển khai.
-
-## Cấu trúc
-
-```text
-src/app/                   Route, metadata, manifest, global tokens, error pages
-project.config.json        Lựa chọn dữ liệu/hosting, tên app và namespace riêng
-src/config/                Thương hiệu, timezone và lựa chọn dịch vụ
-src/components/ui/         shadcn/Radix primitives dùng chung
-src/modules/app-shell/     Ghép màn hình, điều hướng, theme, gallery
-src/modules/notes/core/    Domain, schema và kiểm bản sao lưu
-src/modules/notes/data/    Local repository, sync policy, Firebase/Supabase adapters
-src/modules/auth/          Google Auth qua provider đã chọn
-src/modules/settings/      Hồ sơ, theme, tài khoản, PWA, sao lưu
-src/modules/pwa/           Service worker template, install/update hook
-src/lib/firebase/          Firebase initialization
-src/lib/supabase/          Supabase initialization
-supabase/migrations/       Schema/RLS và RPC ghi có kiểm version
-tests/                     Setup, unit, Firestore emulator, SQL, Chromium/WebKit
-scripts/                   Setup/guard, sinh icon, build PWA, static server, browser runner
-```
-
-Đọc [Design.md](Design.md), [AGENTS.md](AGENTS.md) và module `CONTEXT.md` để tiếp tục bằng Codex.
-
-## Kiểm tra
+[Workflow Pages](.github/workflows/pages.yml) kiểm lint, types, unit, setup và SQL rồi build static export với base path `/DatingRoutine`. Mỗi push `main` sẽ deploy thư mục `out/`. Chi tiết tại [hướng dẫn deploy](docs/hosting.md).
 
 ```powershell
-npm run verify                  # config + lint + types + unit/setup + Supabase SQL + build
-python -m pip install -r requirements-dev.txt
-python -m playwright install chromium webkit
-npm run test:e2e                 # tự mở/đóng static server; cần build trước
-npm run test:db                  # cần Java21+; dùng demo project, không chạm cloud thật
-npm run test:db:supabase         # PostgreSQL WASM/PGlite, không cần tài khoản/Docker
-```
-
-CI chỉ tự setup Local + host tĩnh khi gặp cấu hình template schema 1 còn trống; lựa chọn của dự án đã setup được giữ nguyên. CI chạy Firestore emulator, Supabase SQL và Chromium/WebKit. E2E mặc định kiểm bản không có credentials cloud; kiểm OAuth và cloud thật riêng. Ảnh test nằm ở `output/screenshots/` (không commit). Kết quả và giới hạn nghiệm thu: [docs/verification.md](docs/verification.md).
-
-## Build & triển khai
-
-```powershell
+# Xem production dưới đúng đường dẫn của GitHub Pages
+$env:NEXT_PUBLIC_BASE_PATH = '/DatingRoutine'
 npm run build
 npm start
 ```
 
-PWA chỉ đăng ký worker ở bản production trên HTTPS hoặc localhost. `npm run dev` không có cache offline. Deploy **toàn bộ `out/`**, không deploy source `worker.js`.
+Mở http://localhost:3000/DatingRoutine/. Build chưa có biến Supabase là bản dùng trên thiết bị; sau khi thêm biến phải deploy lại.
 
-Nếu đặt app ở `/ten-repo`, đặt `NEXT_PUBLIC_BASE_PATH=/ten-repo` **trước build** và cùng giá trị khi chạy `npm start`. Đường dẫn này không có dấu `/` ở cuối. Root/custom domain để trống.
+## Dữ liệu và quyền riêng tư
 
-Xem lệnh và cấu hình từng host tại [docs/hosting.md](docs/hosting.md). Workflow **Deploy GitHub Pages** chỉ chạy khi dự án chọn `github-pages`; các host khác dùng cùng thư mục `out/` và adapter dữ liệu đã chọn.
+Repo public chỉ chứa mã nguồn. Nhật ký của mỗi tài khoản có workspace riêng, RLS owner-only. Hai tài khoản khác nhau chưa chia sẻ chung một nhật ký. Dữ liệu khách nằm riêng trong trình duyệt; đăng nhập/đăng xuất không tự chuyển hoặc ghép dữ liệu. Muốn chuyển, xuất JSON ở guest rồi nhập vào tài khoản và đồng bộ.
 
-## Lưu trữ & đồng bộ
+Ảnh có delivery type `authenticated`; URL có chữ ký có thể mở bởi người giữ URL. Bản sao lưu chứa các URL này, không chứa ảnh gốc. Gỡ ảnh, xóa chuyến đi hoặc bỏ nháp chỉ xóa tham chiếu; ảnh đã tải vẫn giữ trong Cloudinary Console. Ảnh không được cache trong service worker, nên xem ảnh offline không được bảo đảm.
 
-LocalStorage lưu riêng `guest` và từng dịch vụ/project/uid. Đăng nhập/đăng xuất không tự nhập hoặc xóa dữ liệu không gian khác. Muốn chuyển ghi chú khách sang tài khoản, xuất JSON ở guest rồi đăng nhập và nhập lại có xác nhận. Với app Firebase phiên bản trước chỉ lưu khóa theo uid: xuất JSON từ bản cũ trước khi nâng cấp rồi nhập ở bản mới; app giữ nguyên khóa cũ nhưng không tự gán sang project mới.
+Bản local có giới hạn 2 MB, 300 chuyến đi, 200 khoản chi/chuyến. Trình duyệt có thể dọn dữ liệu; nên xuất sao lưu và đồng bộ. App không tự merge hoặc tự ghi đè hai bản xung đột.
 
-Mỗi lần sửa lưu local trước. Tài khoản bấm **Đồng bộ ngay** để nhận cloud khi local sạch hoặc gửi local khi phiên bản cloud khớp. Nếu cả hai thay đổi, app chặn ghi đè và yêu cầu đối chiếu. **Tải bản đám mây** có xác nhận vì sẽ thay bản thiết bị. Chỉ báo dịch vụ xác nhận sau server read/transaction/RPC thành công và cập nhật local thành công. Không có đồng bộ ngầm hay merge tự động.
+## Kiểm tra và phát triển tiếp
 
-App này là bộ khung; trước khi dùng nghiệp vụ quan trọng, thiết kế schema, quy tắc phân quyền và chiến lược xung đột phù hợp. Trình duyệt có thể xóa dữ liệu local; hãy xuất sao lưu hoặc đồng bộ thường xuyên. Không lưu token quản trị/service-account trong app client.
+```powershell
+npm run verify
+npm run format:check
+python -m pip install -r requirements-dev.txt
+python -m playwright install chromium webkit
+npm run test:e2e
+```
+
+Xem kết quả thực tại [docs/verification.md](docs/verification.md). Đọc [AGENTS.md](AGENTS.md), [Design.md](Design.md), và `CONTEXT.md` trước khi sửa.
+
+```text
+src/modules/trips/core/      Schema và kiểm sao lưu, ngày, số tiền, URL ảnh
+src/modules/trips/data/      Repository local, sync có kiểm phiên bản, Supabase adapter
+src/modules/trips/           Home, danh sách, editor, chi tiết và chi phí
+src/modules/media/           Client upload qua Edge Function
+src/modules/app-shell/       Ghép màn hình, guard nháp, điều hướng
+src/modules/auth/            Adapter xác thực của template
+src/modules/settings/        Hồ sơ, tài khoản, theme, PWA, sao lưu
+supabase/migrations/         Schema/RLS/RPC chuyến đi
+supabase/functions/cloudinary/ Tải ảnh đã xác thực và ký URL Cloudinary
+```
+
+Các module ghi chú, Firebase và gallery gốc được giữ làm tham chiếu và kiểm thử nền tảng; app này sử dụng module `trips`, Supabase và Cloudinary.

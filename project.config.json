@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "appName": null,
-  "storageKey": null,
-  "dataProvider": null,
-  "hostingProvider": null
+  "appName": "Đi cùng nhau",
+  "storageKey": "dating-routine-v1",
+  "dataProvider": "supabase",
+  "hostingProvider": "github-pages"
 }

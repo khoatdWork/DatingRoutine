@@ -1,0 +1,2 @@
+[functions.cloudinary]
+verify_jwt = false

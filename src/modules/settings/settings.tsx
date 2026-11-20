@@ -22,7 +22,6 @@ import { Label } from "@/components/ui/label";
 import { appConfig } from "@/config/app";
 import { dataProvider, dataProviderLabel } from "@/config/services";
 import type { AuthState } from "@/modules/auth/use-auth";
-import type { Workspace } from "@/modules/notes/data/use-workspace";
 import type { usePwa } from "@/modules/pwa/use-pwa";
 export const settingsTitles = {
   profile: "Hồ sơ",
@@ -223,7 +222,13 @@ export function AccountPanel({
   confirmPull,
 }: {
   auth: AuthState;
-  workspace: Workspace;
+  workspace: {
+    state: { dirty: boolean } | null;
+    busy: boolean;
+    sync: () => unknown;
+    syncStatus?: string;
+    status?: string;
+  };
   online: boolean;
   confirmPull: () => void;
 }) {
@@ -244,12 +249,12 @@ export function AccountPanel({
         <Info size={18} />
         <p>
           {!online
-            ? "Đang mất mạng. Bạn vẫn có thể đọc và lưu ghi chú trên thiết bị."
+            ? "Đang mất mạng. Bạn vẫn có thể đọc và lưu chuyến đi trên thiết bị."
             : auth.user
               ? workspace.state?.dirty
                 ? "Có thay đổi trên thiết bị đang chờ bạn đồng bộ."
                 : `Bản trên thiết bị sẵn sàng. Bấm Đồng bộ để đối chiếu với ${dataProviderLabel}.`
-              : "Ghi chú được lưu trong trình duyệt này. Xuất bản sao lưu để giữ thêm một bản."}
+              : "Chuyến đi được lưu trong trình duyệt này. Xuất bản sao lưu để giữ thêm một bản."}
         </p>
       </div>
       {dataProvider === "local" ? (
@@ -274,19 +279,19 @@ export function AccountPanel({
             {auth.busy ? "Đang xử lý…" : auth.user ? "Đăng xuất" : "Đăng nhập với Google"}
           </Button>
           <p className="help">
-            Mỗi tài khoản có không gian riêng. Ghi chú khách không tự chuyển sang tài khoản; dùng
-            xuất/nhập bản sao lưu nếu muốn chuyển.
+            Mỗi tài khoản có không gian riêng. Chuyến đi của khách không tự chuyển sang tài khoản;
+            dùng xuất/nhập bản sao lưu nếu muốn chuyển.
           </p>
         </>
       ) : (
         <p className="notice">
-          {dataProviderLabel} chưa được cấu hình cho bản app này. Bạn có thể dùng ghi chú và sao lưu
-          trên thiết bị.
+          {dataProviderLabel} chưa được cấu hình cho bản app này. Bạn có thể lưu chuyến đi và sao
+          lưu trên thiết bị.
         </p>
       )}
-      {workspace.syncStatus && (
+      {(workspace.syncStatus || workspace.status) && (
         <p className="success-text" role="status">
-          {workspace.syncStatus}
+          {workspace.syncStatus || workspace.status}
         </p>
       )}
       {auth.error && (
@@ -374,7 +379,7 @@ export function BackupPanel({
       <div>
         <h2>Giữ thêm một bản an toàn</h2>
         <p className="subtitle">
-          Bản JSON chứa hồ sơ và toàn bộ ghi chú trong không gian hiện tại.
+          Bản JSON chứa hồ sơ, chuyến đi, chi phí và liên kết ảnh trong không gian hiện tại.
         </p>
       </div>
       <Button onClick={exportData}>
@@ -396,12 +401,13 @@ export function BackupPanel({
         />
       </label>
       <p className="help">
-        Nhập sẽ thay thế dữ liệu hiện tại sau khi xác nhận. Tệp JSON dưới 1 MB, tối đa 500 ghi chú.
+        Nhập sẽ thay thế dữ liệu hiện tại sau khi xác nhận. Tệp JSON tối đa 2 MB, tối đa 300 chuyến
+        đi.
       </p>
       <div className="danger-zone">
         <h3>Xóa dữ liệu không gian này</h3>
         <p className="help">
-          Xóa hồ sơ và ghi chú trên thiết bị.
+          Xóa hồ sơ và chuyến đi trên thiết bị. Ảnh gốc vẫn được giữ trên Cloudinary.
           {dataProvider !== "local" &&
             ` Nếu đang đăng nhập, thay đổi chỉ lên ${dataProviderLabel} khi bạn bấm Đồng bộ.`}
         </p>
@@ -438,7 +444,8 @@ export function AboutPanel({ children }: { children?: ReactNode }) {
       </dl>
       {children}
       <p className="help">
-        Bộ khung dựa trên WorkingTimeTracking, dành cho dự án web và ứng dụng cài trên thiết bị.
+        Một cuốn nhật ký nhỏ cho hai đứa. Dữ liệu đồng bộ với Supabase, ảnh được lưu trên
+        Cloudinary.
       </p>
     </section>
   );

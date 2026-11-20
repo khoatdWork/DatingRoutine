@@ -11,5 +11,6 @@ next-env.d.ts
 __pycache__/
 .playwright-cli/
 .private/
+supabase/.temp/
 *.pem
 *service-account*.json

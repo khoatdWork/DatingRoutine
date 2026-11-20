@@ -1,6 +1,6 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, House, Layers, LayoutGrid, Settings2, StickyNote } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, BookHeart, Camera, Heart, MapPinned, Settings2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,21 +14,21 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { appConfig, appRoot } from "@/config/app";
-import { dataProvider, dataProviderLabel } from "@/config/services";
-import { firebaseConfig } from "@/lib/firebase/config";
 import { supabaseUrl } from "@/lib/supabase/config";
 import { useAuth, type AuthState } from "@/modules/auth/use-auth";
 import { usePwa } from "@/modules/pwa/use-pwa";
-import { useWorkspace } from "@/modules/notes/data/use-workspace";
-import { storageKey, type WorkspaceOwner } from "@/modules/notes/data/repository";
 import {
   emptySnapshot,
   MAX_BACKUP_BYTES,
   parseBackup,
-  type Note,
+  type Trip,
   type Snapshot,
-} from "@/modules/notes/core/domain";
-import { NoteEditor, NotesView } from "@/modules/notes/notes-view";
+} from "@/modules/trips/core/domain";
+import { useTripsWorkspace } from "@/modules/trips/data/use-workspace";
+import { storageKey, type WorkspaceOwner } from "@/modules/trips/data/repository";
+import { TripEditor } from "@/modules/trips/trip-editor";
+import { TripDetail } from "@/modules/trips/trip-detail";
+import { JourneyHome, JourneysView, ExpensesView } from "@/modules/trips/trip-views";
 import {
   AboutPanel,
   AccountPanel,
@@ -40,10 +40,9 @@ import {
   settingsTitles,
   type SettingsSection,
 } from "@/modules/settings/settings";
-import { Home } from "./home";
-import { ComponentGallery } from "./component-gallery";
-type Tab = "home" | "notes" | "components" | "settings";
-type Confirm = {
+
+type Tab = "home" | "trips" | "expenses" | "settings";
+type Confirmation = {
   title: string;
   description: string;
   label: string;
@@ -51,9 +50,9 @@ type Confirm = {
   danger?: boolean;
 };
 const navigation = [
-  { key: "home", label: "Trang chủ", icon: House },
-  { key: "notes", label: "Ghi chú", icon: StickyNote },
-  { key: "components", label: "Thành phần", icon: LayoutGrid },
+  { key: "home", label: "Nhật ký", icon: BookHeart },
+  { key: "trips", label: "Chuyến đi", icon: MapPinned },
+  { key: "expenses", label: "Chi phí", icon: Wallet },
   { key: "settings", label: "Cài đặt", icon: Settings2 },
 ] as const;
 function download(text: string, filename: string) {
@@ -64,52 +63,85 @@ function download(text: string, filename: string) {
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-function workspaceOwner(uid: string | undefined): WorkspaceOwner {
-  if (!uid) return "guest";
-  if (dataProvider === "firebase" && firebaseConfig.projectId)
-    return { provider: dataProvider, project: firebaseConfig.projectId, uid };
-  if (dataProvider === "supabase" && supabaseUrl) {
-    const url = new URL(supabaseUrl);
-    return {
-      provider: dataProvider,
-      project: `${url.origin}${url.pathname.replace(/\/+$/, "")}`,
-      uid,
-    };
-  }
-  return "guest";
+function workspaceOwner(uid?: string): WorkspaceOwner {
+  if (!uid || !supabaseUrl) return "guest";
+  const url = new URL(supabaseUrl);
+  return { provider: "supabase", project: `${url.origin}${url.pathname.replace(/\/+$/, "")}`, uid };
 }
 export function StarterApp() {
   const auth = useAuth();
   const uid = auth.user?.uid;
   const owner = useMemo(() => workspaceOwner(uid), [uid]);
+  const [draftOwner, setDraftOwner] = useState<{
+    owner: WorkspaceOwner;
+    key: string;
+    dirty: boolean;
+  } | null>(null);
+  const desiredKey = storageKey(owner);
+  const activeOwner = draftOwner?.dirty && draftOwner.key !== desiredKey ? draftOwner.owner : owner;
+  const activeKey = storageKey(activeOwner);
+  const trackDirty = useCallback(
+    (dirty: boolean) => {
+      setDraftOwner({ owner: activeOwner, key: activeKey, dirty });
+    },
+    [activeOwner, activeKey],
+  );
   if (!auth.ready)
     return (
       <div className="app-frame loading-screen" role="status">
-        <Layers size={32} />
-        <p>Đang mở không gian của bạn…</p>
+        <Heart size={32} />
+        <p>Đang mở cuốn nhật ký…</p>
       </div>
     );
-  return <WorkspaceApp key={storageKey(owner)} owner={owner} auth={auth} />;
+  return (
+    <JourneyWorkspace
+      key={activeKey}
+      owner={activeOwner}
+      auth={auth}
+      sessionChanged={activeKey !== desiredKey}
+      onDraftChange={trackDirty}
+    />
+  );
 }
-function WorkspaceApp({ owner, auth }: { owner: WorkspaceOwner; auth: AuthState }) {
-  const workspace = useWorkspace(owner);
+function JourneyWorkspace({
+  owner,
+  auth,
+  sessionChanged,
+  onDraftChange,
+}: {
+  owner: WorkspaceOwner;
+  auth: AuthState;
+  sessionChanged: boolean;
+  onDraftChange: (dirty: boolean) => void;
+}) {
+  const workspace = useTripsWorkspace(owner);
   const pwa = usePwa();
   const [tab, setTab] = useState<Tab>("home");
   const [section, setSection] = useState<SettingsSection | null>(null);
-  const [editor, setEditor] = useState<{ note: Note; version: number } | null>(null);
-  const [dirty, setDirty] = useState(false);
-  const [confirm, setConfirm] = useState<Confirm | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editor, setEditor] = useState<{ trip: Trip; version: number; isNew: boolean } | null>(
+    null,
+  );
+  const [dirty, setDirtyState] = useState(false);
+  const setDirty = useCallback(
+    (value: boolean) => {
+      setDirtyState(value);
+      onDraftChange(value);
+    },
+    [onDraftChange],
+  );
+  const [confirm, setConfirm] = useState<Confirmation | null>(null);
   const main = useRef<HTMLElement>(null);
+  const snapshot = workspace.state?.snapshot;
+  const selected = snapshot?.trips.find((trip) => trip.id === selectedId);
   useEffect(() => {
-    const heading = main.current?.querySelector<HTMLElement>("h1");
-    heading?.focus({ preventScroll: true });
+    main.current?.querySelector<HTMLElement>("h1")?.focus({ preventScroll: true });
     window.scrollTo(0, 0);
-  }, [tab, section, editor?.note.id]);
+  }, [tab, section, editor?.trip.id, selectedId]);
   useEffect(() => {
-    const beforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-    };
-    if (dirty) window.addEventListener("beforeunload", beforeUnload);
+    if (!dirty) return;
+    const beforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", beforeUnload);
     return () => window.removeEventListener("beforeunload", beforeUnload);
   }, [dirty]);
   function guard(action: () => void) {
@@ -117,7 +149,8 @@ function WorkspaceApp({ owner, auth }: { owner: WorkspaceOwner; auth: AuthState 
     if (dirty)
       setConfirm({
         title: "Bỏ thay đổi chưa lưu?",
-        description: "Bạn đang có nội dung chưa lưu. Quay lại để lưu hoặc bỏ thay đổi để tiếp tục.",
+        description:
+          "Nội dung đang sửa chưa được lưu vào nhật ký. Ảnh đã tải vẫn được giữ trên Cloudinary.",
         label: "Bỏ thay đổi",
         action: () => {
           setDirty(false);
@@ -131,70 +164,74 @@ function WorkspaceApp({ owner, auth }: { owner: WorkspaceOwner; auth: AuthState 
       setTab(next);
       setSection(nextSection);
       setEditor(null);
+      setSelectedId(null);
     });
   }
-  function open(note?: Note) {
+  function open(trip: Trip) {
     guard(() => {
-      setTab("notes");
+      setTab("trips");
+      setSelectedId(trip.id);
+      setEditor(null);
+    });
+  }
+  function edit(trip?: Trip) {
+    guard(() => {
+      const now = new Date().toISOString();
+      const today = new Date().toLocaleDateString("sv-SE", { timeZone: appConfig.timeZone });
+      setTab("trips");
       setEditor({
-        note: note ?? {
+        isNew: !trip,
+        version: workspace.state!.localVersion,
+        trip: trip ?? {
           id: crypto.randomUUID(),
           title: "",
-          body: "",
-          kind: "idea",
-          completed: false,
-          updatedAt: new Date().toISOString(),
+          location: "",
+          startDate: today,
+          endDate: today,
+          note: "",
+          mood: "love",
+          photos: [],
+          expenses: [],
+          createdAt: now,
+          updatedAt: now,
         },
-        version: workspace.state?.localVersion ?? 0,
       });
     });
   }
-  function saveSnapshot(snapshot: Snapshot, expected?: number, success = "Đã lưu trên thiết bị.") {
-    if (!workspace.commit(snapshot, expected)) return false;
-    toast.success(success);
+  function saveSnapshot(
+    next: Snapshot,
+    expected = workspace.state?.localVersion,
+    message = "Đã lưu trên thiết bị.",
+  ) {
+    if (expected === undefined || !workspace.save(next, expected)) return false;
+    toast.success(message);
     return true;
   }
-  function toggle(note: Note) {
-    if (!workspace.state) return;
-    saveSnapshot(
-      {
-        ...workspace.state.snapshot,
-        notes: workspace.state.snapshot.notes.map((n) =>
-          n.id === note.id
-            ? { ...n, completed: !n.completed, updatedAt: new Date().toISOString() }
-            : n,
-        ),
-      },
-      undefined,
-      note.completed ? "Đã đánh dấu chưa xong." : "Đã đánh dấu hoàn tất.",
-    );
-  }
   function exportData() {
-    if (!workspace.state) return;
+    if (!snapshot) return;
     download(
-      JSON.stringify(workspace.state.snapshot, null, 2),
-      `${appConfig.storageKey}-backup-${new Date().toISOString().slice(0, 10)}.json`,
+      JSON.stringify(snapshot),
+      `di-cung-nhau-${new Date().toISOString().slice(0, 10)}.json`,
     );
     toast.success("Đã xuất bản sao lưu.");
   }
   async function importData(file: File) {
     const expected = workspace.state?.localVersion;
     try {
-      if (file.size > MAX_BACKUP_BYTES) throw new Error("Tệp sao lưu phải nhỏ hơn 1 MB.");
-      const snapshot = parseBackup(await file.text());
+      if (file.size > MAX_BACKUP_BYTES) throw new Error("Tệp sao lưu phải nhỏ hơn 2 MB.");
+      const imported = parseBackup(await file.text());
       setConfirm({
-        title: "Thay dữ liệu bằng bản sao lưu?",
-        description: `Bản sao lưu có ${snapshot.notes.length} ghi chú. Hồ sơ và ghi chú hiện tại trong không gian này sẽ được thay thế. Hãy xuất bản hiện tại trước nếu cần giữ lại.`,
+        title: "Thay nhật ký bằng bản sao lưu?",
+        description: `Bản sao lưu có ${imported.trips.length} chuyến đi. Hồ sơ, chuyến đi và chi phí hiện tại sẽ được thay thế. Hãy xuất bản hiện tại nếu cần giữ lại.`,
         label: "Nhập bản sao lưu",
         action: () => {
-          saveSnapshot(snapshot, expected, "Đã nhập bản sao lưu trên thiết bị.");
+          saveSnapshot(imported, expected, "Đã nhập bản sao lưu trên thiết bị.");
         },
       });
     } catch (cause) {
-      toast.error(cause instanceof Error ? cause.message : "Không đọc được tệp sao lưu.");
+      toast.error(cause instanceof Error ? cause.message : "Không đọc được bản sao lưu.");
     }
   }
-  const snapshot = workspace.state?.snapshot;
   return (
     <div className="app-frame">
       <a className="skip-link" href="#main">
@@ -210,12 +247,23 @@ function WorkspaceApp({ owner, auth }: { owner: WorkspaceOwner; auth: AuthState 
           }}
         >
           <span className="brand-mark">
-            <Layers size={22} />
+            <Heart size={20} />
           </span>
-          {appConfig.name}
-          <span className="brand-dot">.</span>
+          <span>
+            {appConfig.name}
+            <small>Cuốn nhật ký của hai đứa</small>
+          </span>
         </a>
-        <span className="header-caption">Web & Mobile</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="header-add"
+          aria-label="Thêm chuyến đi"
+          disabled={!snapshot || workspace.busy}
+          onClick={() => edit()}
+        >
+          <Camera size={20} />
+        </Button>
       </header>
       {pwa.waiting && (
         <div className="update-notice" role="status">
@@ -226,6 +274,12 @@ function WorkspaceApp({ owner, auth }: { owner: WorkspaceOwner; auth: AuthState 
         </div>
       )}
       <main id="main" ref={main} className="main-content" tabIndex={-1} aria-busy={workspace.busy}>
+        {sessionChanged && (
+          <div className="notice" role="status">
+            Phiên tài khoản đã thay đổi. Lưu hoặc bỏ nháp này để mở không gian mới. Nháp vẫn thuộc
+            không gian đang sửa.
+          </div>
+        )}
         {workspace.error && (
           <div className="error-notice" role="alert">
             <p>{workspace.error}</p>
@@ -235,12 +289,12 @@ function WorkspaceApp({ owner, auth }: { owner: WorkspaceOwner; auth: AuthState 
                   variant="outline"
                   onClick={() => {
                     const raw = localStorage.getItem(storageKey(owner));
-                    if (raw) download(raw, "workspace-original.json");
+                    if (raw) download(raw, "nhat-ky-original.json");
                   }}
                 >
                   Xuất dữ liệu gốc
                 </Button>
-                <Button variant="outline" onClick={() => window.location.reload()}>
+                <Button variant="outline" onClick={() => guard(() => window.location.reload())}>
                   Thử mở lại
                 </Button>
               </>
@@ -249,8 +303,8 @@ function WorkspaceApp({ owner, auth }: { owner: WorkspaceOwner; auth: AuthState 
         )}
         {!snapshot ? (
           !workspace.error && (
-            <p role="status" className="loading-screen">
-              Đang đọc dữ liệu trên thiết bị…
+            <p className="loading-screen" role="status">
+              Đang đọc nhật ký trên thiết bị…
             </p>
           )
         ) : editor ? (
@@ -261,91 +315,114 @@ function WorkspaceApp({ owner, auth }: { owner: WorkspaceOwner; auth: AuthState 
               onClick={() => guard(() => setEditor(null))}
             >
               <ArrowLeft />
-              Quay lại Ghi chú
+              Quay lại
             </Button>
-            <NoteEditor
-              key={editor.note.id}
-              note={editor.note}
-              dirty={setDirty}
-              cancel={() => guard(() => setEditor(null))}
-              save={(note) => {
-                const exists = snapshot.notes.some((n) => n.id === note.id);
+            <TripEditor
+              key={editor.trip.id}
+              trip={editor.trip}
+              isNew={editor.isNew}
+              canUpload={
+                owner !== "guest" &&
+                auth.user?.uid === owner.uid &&
+                auth.configured &&
+                !sessionChanged
+              }
+              onDirty={setDirty}
+              onCancel={() => guard(() => setEditor(null))}
+              onSave={(trip) => {
+                const exists = snapshot.trips.some((entry) => entry.id === trip.id);
                 if (
                   !saveSnapshot(
                     {
                       ...snapshot,
-                      notes: exists
-                        ? snapshot.notes.map((n) => (n.id === note.id ? note : n))
-                        : [note, ...snapshot.notes],
+                      trips: exists
+                        ? snapshot.trips.map((entry) => (entry.id === trip.id ? trip : entry))
+                        : [trip, ...snapshot.trips],
                     },
                     editor.version,
-                    "Đã lưu ghi chú trên thiết bị.",
+                    "Đã lưu chuyến đi trên thiết bị.",
                   )
                 )
                   return false;
                 setDirty(false);
                 setEditor(null);
+                setSelectedId(trip.id);
                 return true;
               }}
-              remove={() =>
+            />
+          </>
+        ) : selected ? (
+          <>
+            <Button variant="ghost" className="back-button" onClick={() => setSelectedId(null)}>
+              <ArrowLeft />
+              Tất cả chuyến đi
+            </Button>
+            <TripDetail
+              trip={selected}
+              onEdit={() => edit(selected)}
+              onDelete={() => {
+                const expected = workspace.state!.localVersion;
                 setConfirm({
-                  title: "Xóa ghi chú này?",
-                  description: `“${editor.note.title}” sẽ bị xóa khỏi không gian này.`,
-                  label: "Xóa ghi chú",
+                  title: "Xóa chuyến đi này?",
+                  description: `“${selected.title}” cùng ghi chú và chi phí sẽ bị xóa khỏi nhật ký. Ảnh gốc vẫn được giữ trên Cloudinary.`,
+                  label: "Xóa chuyến đi",
                   danger: true,
                   action: () => {
                     if (
                       saveSnapshot(
                         {
                           ...snapshot,
-                          notes: snapshot.notes.filter((n) => n.id !== editor.note.id),
+                          trips: snapshot.trips.filter((trip) => trip.id !== selected.id),
                         },
-                        editor.version,
-                        "Đã xóa ghi chú trên thiết bị.",
+                        expected,
+                        "Đã xóa chuyến đi trên thiết bị.",
                       )
-                    ) {
-                      setDirty(false);
-                      setEditor(null);
-                    }
+                    )
+                      setSelectedId(null);
                   },
-                })
-              }
+                });
+              }}
             />
           </>
         ) : (
           <>
             {tab === "home" && (
-              <Home
-                snapshot={snapshot}
-                create={() => open()}
-                edit={open}
-                toggle={toggle}
-                showNotes={() => move("notes")}
-                showComponents={() => move("components")}
+              <JourneyHome
+                trips={snapshot.trips}
+                displayName={snapshot.profile.displayName}
+                onCreate={() => edit()}
+                onOpen={(id) => {
+                  const trip = snapshot.trips.find((entry) => entry.id === id);
+                  if (trip) open(trip);
+                }}
+                onShowAll={() => move("trips")}
               />
             )}
-            {tab === "notes" && (
-              <NotesView notes={snapshot.notes} create={() => open()} edit={open} toggle={toggle} />
+            {tab === "trips" && (
+              <JourneysView
+                trips={snapshot.trips}
+                onCreate={() => edit()}
+                onOpen={(id) => {
+                  const trip = snapshot.trips.find((entry) => entry.id === id);
+                  if (trip) open(trip);
+                }}
+              />
             )}
-            {tab === "components" && (
-              <ComponentGallery
-                confirm={() =>
-                  setConfirm({
-                    title: "Thử hộp thoại xác nhận?",
-                    description:
-                      "Đây là thao tác minh họa. Khi xác nhận, app chỉ hiện thông báo; ghi chú của bạn được giữ nguyên.",
-                    label: "Thử xác nhận",
-                    action: () => toast.success("Đã xác nhận thao tác mẫu."),
-                  })
-                }
+            {tab === "expenses" && (
+              <ExpensesView
+                trips={snapshot.trips}
+                onOpen={(id) => {
+                  const trip = snapshot.trips.find((entry) => entry.id === id);
+                  if (trip) open(trip);
+                }}
               />
             )}
             {tab === "settings" &&
               (!section ? (
                 <SettingsMenu
-                  open={(s) => move("settings", s)}
+                  open={(value) => move("settings", value)}
                   name={snapshot.profile.displayName}
-                  account={auth.user?.email || null}
+                  account={auth.user?.email ?? null}
                   offlineReady={pwa.ready}
                   update={pwa.waiting}
                 />
@@ -375,22 +452,35 @@ function WorkspaceApp({ owner, auth }: { owner: WorkspaceOwner; auth: AuthState 
                   )}
                   {section === "appearance" && <AppearancePanel />}
                   {section === "account" && (
-                    <AccountPanel
-                      auth={auth}
-                      workspace={workspace}
-                      online={pwa.online}
-                      confirmPull={() => {
-                        const expected = workspace.state?.localVersion;
-                        setConfirm({
-                          title: "Tải bản đám mây về thiết bị?",
-                          description: `Bản trên ${dataProviderLabel} sẽ thay thế hồ sơ và ghi chú trên thiết bị, kể cả thay đổi chưa đồng bộ. Hãy xuất bản sao lưu hiện tại trước khi tiếp tục.`,
-                          label: "Tải bản đám mây",
-                          action: () => {
-                            void workspace.sync(true, expected);
-                          },
-                        });
-                      }}
-                    />
+                    <>
+                      <AccountPanel
+                        auth={auth}
+                        workspace={workspace}
+                        online={pwa.online}
+                        confirmPull={() => {
+                          const expected = workspace.state?.localVersion;
+                          setConfirm({
+                            title: "Tải bản đám mây về thiết bị?",
+                            description:
+                              "Bản Supabase sẽ thay thế nhật ký trên thiết bị, kể cả thay đổi chưa đồng bộ. Xuất bản sao lưu trước nếu cần giữ lại.",
+                            label: "Tải bản đám mây",
+                            action: () => {
+                              void workspace.sync(true, expected);
+                            },
+                          });
+                        }}
+                      />
+                      <div className="media-info">
+                        <Camera size={19} />
+                        <div>
+                          <strong>Ảnh chuyến đi</strong>
+                          <p>
+                            Ảnh lưu trên Cloudinary. Đăng nhập để thêm ảnh sau khi chủ app hoàn tất
+                            cấu hình.
+                          </p>
+                        </div>
+                      </div>
+                    </>
                   )}
                   {section === "app" && (
                     <PwaPanel
@@ -399,7 +489,7 @@ function WorkspaceApp({ owner, auth }: { owner: WorkspaceOwner; auth: AuthState 
                         setConfirm({
                           title: "Cập nhật ứng dụng?",
                           description:
-                            "Ứng dụng sẽ tải lại để dùng phiên bản mới. Dữ liệu đã lưu trên thiết bị vẫn được giữ.",
+                            "Ứng dụng sẽ tải lại. Nhật ký đã lưu trên thiết bị vẫn được giữ.",
                           label: "Cập nhật và tải lại",
                           action: pwa.update,
                         })
@@ -415,7 +505,7 @@ function WorkspaceApp({ owner, auth }: { owner: WorkspaceOwner; auth: AuthState 
                         setConfirm({
                           title: "Xóa dữ liệu không gian này?",
                           description:
-                            "Hồ sơ và toàn bộ ghi chú trên thiết bị trong không gian này sẽ bị xóa. Hãy xuất bản sao lưu trước nếu cần giữ lại.",
+                            "Hồ sơ và toàn bộ chuyến đi trên thiết bị sẽ bị xóa. Hãy xuất bản sao lưu nếu cần giữ lại. Ảnh gốc vẫn được giữ trên Cloudinary.",
                           label: "Xóa dữ liệu",
                           danger: true,
                           action: () => {

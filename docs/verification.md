@@ -1,41 +1,38 @@
-# Kiểm chứng template — 20/11/2026
+# Kiểm chứng Đi cùng nhau — 21/11/2026
 
-## Đã chạy trên máy phát triển cho thay đổi đa dịch vụ
+## Kết quả trên máy phát triển
 
-| Kiểm tra                                                                                                                                                                         | Kết quả                                           |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| ESLint, TypeScript strict + Next route types, Prettier, git diff whitespace                                                                                                      | PASS                                              |
-| Unit: schema/import/local/version/sync, namespace theo dịch vụ/project/uid, chọn adapter, Supabase read/RPC                                                                      | 27/27 PASS                                        |
-| Setup CLI: bắt buộc chọn tên/dữ liệu/hosting, đủ 12 tổ hợp, namespace riêng, chặn schema/provider lỗi, xác nhận đổi lựa chọn, giữ env                                            | 7/7 PASS                                          |
-| Chạy `npm run dev` khi template chưa setup                                                                                                                                       | Bị chặn, hướng dẫn chạy `npm run setup`           |
-| Production static export + service worker: Local root, Firebase và Supabase dưới `/template-test`                                                                                | PASS                                              |
-| Firestore Emulator với Java 21: owner read/write, guest/other-user denial, schema/version/path denial                                                                            | 3/3 PASS                                          |
-| PostgreSQL/PGlite áp dụng Supabase migration: owner-only read/RPC, chặn guest/anonymous/khác uid/ghi trực tiếp, schema/kích thước/version                                        | 4/4 PASS                                          |
-| Chromium + WebKit trên bản Local, Firebase và Supabase thiếu env: CRUD, nháp, lưu qua reload, filter/search, theme, backup/import/reset, chặn editor cũ                          | PASS                                              |
-| Axe WCAG2A/AA/2.1AA: Trang chủ, Ghi chú, Thành phần, Cài đặt, theme tối, tài khoản 320px trên ba bản trên                                                                        | PASS trong phạm vi kiểm tra                       |
-| Responsive 320px không tràn ngang; desktop giới hạn 480px; manifest/icon/root và subpath                                                                                         | PASS                                              |
-| Chromium: service worker, reload offline, tạo/đọc lại ghi chú khi offline, không gọi dịch vụ cloud trên bản thiếu env/Local                                                      | PASS                                              |
-| Chromium, Supabase với phiên/API mô phỏng: tách guest/tài khoản, local-first, chờ RPC mới báo thành công, giữ local khi đọc lỗi/xung đột, xác nhận tải cloud, đăng xuất về guest | PASS dưới `/template-test`                        |
-| Firebase Hosting JSON, workflow YAML, kiểm Pages đúng hosting đã chọn                                                                                                            | Kiểm cấu trúc và CLI cục bộ PASS; chưa triển khai |
+| Kiểm tra                                                                                                                                                              | Kết quả                                            |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Chọn dự án bằng setup: Đi cùng nhau / namespace dating-routine-v1 / Supabase / GitHub Pages                                                                           | PASS                                               |
+| ESLint, TypeScript strict + Next route types, Prettier                                                                                                                | PASS                                               |
+| Unit: schema, ngày, tiền, backup, namespace, quota, local version, adapter và Cloudinary Edge Function                                                                | 37/37 PASS                                         |
+| Setup CLI: tổ hợp dịch vụ/hosting, namespace, xác nhận, giữ env                                                                                                       | 7/7 PASS                                           |
+| PostgreSQL/PGlite: migration ghi chú nền và chuyến đi, RLS/RPC owner-only, guest/anonymous/khác uid, invalid schema, expected version                                 | 8/8 PASS                                           |
+| Static export và PWA tại root và `/DatingRoutine/`                                                                                                                    | PASS                                               |
+| Chromium + WebKit: CRUD chuyến đi, ngày không hợp lệ, chi phí/hạng mục/người trả, lưu qua reload, tìm theo ghi chú, lọc năm                                           | PASS                                               |
+| Chromium + WebKit: guard nháp, theme, profile, backup/reset/import schema/confirm, editor cũ giữa hai tab                                                             | PASS                                               |
+| Axe WCAG2A/AA/2.1AA, màn 320px/390px, desktop max480px                                                                                                                | PASS trong các màn đã kiểm                         |
+| Chromium PWA: shell/font offline, tạo và đọc lại chuyến đi offline, manifest/icon dưới subpath                                                                        | PASS                                               |
+| Chromium với Supabase và Cloudinary API giả: phiên tài khoản, guest/account isolation, upload PNG/authorization/MIME, preview, lưu metadata, chờ RPC mới báo xác nhận | PASS                                               |
+| Chromium API giả: đọc lỗi, xung đột, xác nhận tải cloud, đăng xuất từ tab khác vẫn giữ nháp và lưu vào đúng owner                                                     | PASS                                               |
+| Edge Function: thiếu auth, MIME giả, quá 8MiB, UID-scoped public ID, SHA-256 signature, authenticated delivery, lỗi Cloudinary                                        | 4/4 unit PASS (nằm trong 37 unit)                  |
+| Edge TypeScript với Deno check                                                                                                                                        | PASS                                               |
+| npm audit --omit=dev                                                                                                                                                  | 0 lỗ hổng dependency production tại thời điểm kiểm |
 
-Các bản kiểm tra dùng namespace fixture, public key giả và demo Firebase project. Không dùng tài khoản hoặc dữ liệu người dùng thật. Ảnh/backup fixture nằm trong `output/` (ignored). Cấu hình template được trả về các trường `null` sau nghiệm thu để buộc người tạo dự án chọn trước khi bắt đầu.
+Browser fixture và ảnh chụp nằm ở `output/`, không commit. API giả không dùng dữ liệu người dùng, Supabase project hoặc Cloudinary account thật. Bản guest không phát request ra dịch vụ ngoài. Trình duyệt thực thi JavaScript production, không chỉ kiểm HTML.
 
-Wizard tương tác cũng đã chạy trong fixture `output/setup-interactive`: hỏi tên, từ chối lựa chọn trống, chọn Supabase + Cloudflare bằng số và tạo namespace riêng thành công.
+## GitHub
 
-## CI
+Repo public `khoatdWork/DatingRoutine` đã tạo riêng từ template; remote `template` giữ URL gốc. Pages chọn source GitHub Actions, HTTPS, URL `https://khoatdwork.github.io/DatingRoutine/`.
 
-Workflow Verify template chỉ khởi tạo Local + host tĩnh cho schema 1 còn toàn bộ trường lựa chọn trống. Với cấu hình đã chọn, CI giữ nguyên và kiểm tính hợp lệ. Kiểm lint/format/types/unit/setup, Firestore emulator, Supabase SQL, build dưới subpath và Chromium/WebKit. Job Supabase browser dùng cấu hình fixture và API bị intercept riêng, không deploy.
+Workflow Deploy GitHub Pages chạy trên push main, kiểm lint/types/unit/setup/SQL rồi build theo repo base path. Verify DatingRoutine kiểm format và Chromium/WebKit, thêm job Supabase/Cloudinary mock độc lập. Kết quả workflow thực được cập nhật sau lần push đầu.
 
-Workflow Deploy GitHub Pages yêu cầu lựa chọn `github-pages` trước build/deploy; truyền public env của provider đã chọn. Cloudflare Pages, Firebase Hosting và host tĩnh dùng hướng dẫn tại [hosting.md](hosting.md).
+## Giới hạn thực
 
-Chưa chạy các workflow mới trên GitHub trong lần thay đổi này. Kết quả CI cũ tại [run 44713034699](https://github.com/khoatdWork/Web-Mobile-App-PWA-Template/actions/runs/44713034699) chỉ phản ánh commit `adb59824e75e3369321b3a7576f368fbd19b40a8` trước thay đổi đa dịch vụ.
-
-## Giới hạn đã biết
-
-- Chưa cấu hình Firebase/Supabase project thật: Google OAuth, redirect/authorized domains, Auth/PostgREST và đồng bộ qua mạng thật cần nghiệm thu trước triển khai. Browser Supabase dùng phiên/API mô phỏng.
-- PGlite chạy PostgreSQL trong WASM với mô phỏng `auth.uid()`/JWT. Bài version kiểm hai lệnh cạnh tranh qua cùng kết nối; chưa kiểm hai session PostgreSQL độc lập hoặc toàn bộ Supabase stack.
-- Chưa deploy Cloudflare Pages, GitHub Pages hoặc Firebase Hosting thật; chưa chạy workflow mới trên remote.
-- Chưa cài trên điện thoại vật lý. WebKit không tương đương Safari iPhone thật; offline chỉ kiểm Chromium. Native install prompt và tình huống hai release/failed worker install chưa nghiệm thu riêng.
-- LocalStorage version check chặn editor cũ nhưng không có transaction liên tab nguyên tử. Nhu cầu ghi song song cường độ cao cần IndexedDB transaction.
-- Khóa tài khoản Firebase cũ chỉ có uid không tự gán sang namespace mới vì thiếu định danh project gốc. Dữ liệu cũ vẫn được giữ; xuất từ bản cũ và nhập có xác nhận ở bản mới. Đổi dịch vụ không tự di chuyển dữ liệu cloud.
-- Đồng bộ là snapshot/version và thao tác thủ công; không tự merge. Supabase RPC kiểm schema/phần tử/kích thước; Firestore rules hiện kiểm quyền và cấu trúc cấp cao, phần tử note kiểm ở client. Mở rộng rules/server validation nếu có yêu cầu chặt hơn.
+- Chưa tạo Supabase project/Cloudinary account theo lựa chọn người dùng. Chưa nghiệm thu OAuth Google, Auth/PostgREST, upload/delivery Cloudinary hoặc quota thật. Bản public ban đầu dùng guest local; sau khi cấu hình dịch vụ phải build/deploy lại.
+- PGlite mô phỏng auth.uid/JWT trên PostgreSQL WASM; không thay thế kiểm Supabase đầy đủ hoặc hai session database độc lập.
+- Chưa cài trên điện thoại vật lý. WebKit không tương đương Safari iPhone thật; native install prompt và cập nhật qua hai release chưa kiểm riêng.
+- localStorage version check không phải transaction liên tab nguyên tử. Khi lỗi dung lượng hoặc dữ liệu hỏng, app giữ nháp và không báo đã lưu. Khi storage event hỏng dữ liệu, hook giữ snapshot đọc được gần nhất để tránh unmount editor; ghi tiếp vẫn bị chặn.
+- Mỗi tài khoản có nhật ký riêng, chưa chia sẻ nhật ký giữa hai uid. Đồng bộ thủ công cả snapshot, không tự merge.
+- Ảnh authenticated có URL ký không hết hạn, người giữ URL có thể mở. Gỡ ảnh/bỏ nháp/xóa chuyến chỉ xóa tham chiếu. Cần xóa asset không dùng bằng Cloudinary Console. Ảnh không được service worker cache để dùng offline.

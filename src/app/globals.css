@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @custom-variant dark (&:is(.dark *));
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+}
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -1042,5 +1047,163 @@ main:focus {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+/* A pocket album: quiet blue chrome, with the postcard carrying the illustration. */
+.brand {
+  font-size: 18px;
+  letter-spacing: -0.6px;
+  gap: 11px;
+}
+.brand > span:last-child {
+  display: grid;
+  gap: 1px;
+}
+.brand small {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--muted-foreground);
+}
+.brand-mark {
+  border-radius: 12px 12px 12px 3px;
+  width: 38px;
+  height: 42px;
+}
+.header-add {
+  color: var(--primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+}
+.app-header {
+  padding-bottom: 15px;
+}
+.main-content {
+  padding-top: 9px;
+}
+.media-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding: 21px 3px;
+  margin-top: 20px;
+}
+.media-info > svg {
+  color: var(--primary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.media-info strong {
+  font-size: 13px;
+}
+.media-info p {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  margin-top: 4px;
+}
+.journey-hero {
+  min-height: 245px;
+}
+.journey-hero-copy {
+  max-width: 72%;
+}
+.journey-hero-copy h2 {
+  font-size: 20px;
+  letter-spacing: -0.65px;
+  line-height: 1.45;
+}
+.journey-hero-art {
+  opacity: 0.95;
+}
+.journey-stats dd {
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+.journey-stat:last-child dd {
+  font-size: 15px;
+  line-height: 24px;
+}
+.journey-stat > svg {
+  display: none;
+}
+.journey-section-heading h2 {
+  font-size: 16px;
+}
+.journey-empty {
+  flex-wrap: wrap;
+}
+.journey-empty p {
+  font-size: 12px;
+}
+.journey-field [data-slot="label"] {
+  margin: 0;
+  font-size: 12px;
+}
+.journey-field {
+  min-width: 0;
+}
+.journey-form select,
+.journey-form input[type="date"] {
+  max-width: 100%;
+}
+.journey-form select:focus-visible,
+.journey-filters select:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+.journey-form textarea {
+  min-height: 110px;
+}
+.journey-lightbox figure {
+  margin: 0;
+}
+.journey-photo-grid {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.trip-card {
+  min-height: 100px;
+}
+.trip-card h3 {
+  font-size: 13px;
+}
+.sr-only[data-slot="label"] {
+  margin: 0;
+  padding: 0;
+}
+select {
+  font-family: inherit;
+}
+@media (max-width: 359px) {
+  .main-content {
+    padding-inline: 16px;
+  }
+  .app-header {
+    padding-inline: 16px;
+  }
+  .journey-hero {
+    padding: 18px 16px;
+  }
+  .journey-hero-copy {
+    max-width: 79%;
+  }
+  .journey-hero-art {
+    width: 54%;
+    opacity: 0.7;
+  }
+  .journey-stat:last-child dd {
+    font-size: 13px;
+  }
+  .journey-empty {
+    gap: 8px;
+  }
+  .journey-empty > [data-slot="button"] {
+    width: 100%;
+  }
+  .journey-grid-two {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

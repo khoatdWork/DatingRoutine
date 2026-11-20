@@ -1,5 +1,7 @@
 # Settings
 
-Danh sách ba nhóm theo WorkingTimeTracking; mở từng mục Hồ sơ/Tài khoản/Giao diện/Cài ứng dụng/Bản sao lưu/Về ứng dụng. Profile giữ baseline version, guard khi bỏ nháp. Theme sáng/tối/system dùng next-themes, storage riêng namespace app. JSON import kiểm dữ liệu trước khi confirm, export snapshot hiện tại, reset confirm và lưu local trước. PWA update qua dialog, không tự reload nháp.
+Cài đặt theo nhóm: Hồ sơ, Tài khoản & đồng bộ, Giao diện, Cài ứng dụng, Bản sao lưu, Về ứng dụng. Các panel dùng chung primitives từ template, AccountPanel nhận interface trạng thái sync tối thiểu thay vì phụ thuộc note domain.
 
-Mục Tài khoản & đồng bộ hiển thị chế độ lưu trên thiết bị hoặc tên dịch vụ đám mây đã chọn. Dịch vụ thiếu cấu hình có thông báo riêng. Chỉ hiện thao tác đăng nhập khi dịch vụ đã cấu hình và hiện đồng bộ khi có phiên tài khoản.
+Hồ sơ giữ baseline version, guard khi bỏ nháp. Theme sáng/tối/system qua next-themes theo namespace app. Backup JSON chuyến đi tối đa 2MB/300trip: kiểm schema trước confirm, expected version kiểm khi thay dữ liệu. Backup chứa link ảnh, không ảnh gốc. Reset/xóa chỉ bỏ dữ liệu workspace, không xóa asset Cloudinary.
+
+Tài khoản hiển thị đúng provider đã chọn, cấu hình thiếu vẫn dùng guest local. Đồng bộ chỉ báo xác nhận sau server và local write thành công. Xem docs/verification.md để biết phạm vi kiểm thực.

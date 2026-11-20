@@ -1,58 +1,28 @@
-# Triển khai PWA
+# GitHub Pages
 
-Chạy `npm run setup` và chọn nơi triển khai cho dự án. Commit `project.config.json` để các lần build và CI dùng cùng lựa chọn. Ví dụ sau dùng dữ liệu local và Cloudflare Pages.
+Repo này đã chọn `github-pages` trong `project.config.json`. Workflow **Deploy GitHub Pages** chạy mỗi push `main` và có nút **Run workflow**. Bản tĩnh nằm ở `out/`; base path mặc định lấy tên repo `/DatingRoutine`.
 
-```powershell
-npm run setup -- --data local --hosting cloudflare --name "Tên ứng dụng"
-```
+## Thiết lập
 
-| Nơi triển khai    | Giá trị `--hosting` |
-| ----------------- | ------------------- |
-| Cloudflare Pages  | `cloudflare`        |
-| GitHub Pages      | `github-pages`      |
-| Firebase Hosting  | `firebase`          |
-| Máy chủ tĩnh khác | `static`            |
+1. Repository Settings → Pages → Build and deployment → Source: **GitHub Actions**.
+2. Repository Settings → Secrets and variables → Actions → **Variables**, thêm:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+3. Actions → Deploy GitHub Pages → Run workflow trên nhánh `main` (hoặc push code).
+4. Mở https://khoatdwork.github.io/DatingRoutine/.
 
-Mỗi lựa chọn triển khai dùng được với `local`, `firebase` hoặc `supabase`. Nếu dùng cloud, nhập các biến `NEXT_PUBLIC_*` của provider vào môi trường **trước khi build**. Các giá trị này xuất hiện trong mã client. Chỉ nhập khóa web Firebase hoặc khóa Supabase publishable (hoặc anon cũ) theo `.env.example`.
+Chưa có Supabase thì bỏ trống các biến; app vẫn deploy và dùng trên thiết bị. Muốn kích hoạt tài khoản sau đó, điền biến rồi chạy deploy lại. Cloudinary secret đặt trong Supabase Edge Function, không đặt vào Pages.
 
-Triển khai toàn bộ nội dung của `out/`, kể cả `_next/` và `sw.js`. PWA dùng HTTPS hoặc `localhost`. Nếu app đặt dưới `/ten-app`, đặt `NEXT_PUBLIC_BASE_PATH=/ten-app` trước khi build và phục vụ `out/` tại đúng đường dẫn đó. Với domain riêng ở root, để biến này trống.
+Để dùng custom domain ở root, đặt repository variable `PAGES_BASE_PATH` thành `/`, cấu hình domain trong Pages rồi cập nhật Supabase Site URL/Redirect URLs. Không đặt dấu `/` cuối cho base path dạng `/DatingRoutine`.
 
-## Cloudflare Pages
-
-- Tạo dự án Pages và kết nối repository. Chọn preset **None**, đặt build command `node scripts/check-project.mjs --hosting cloudflare && npm run build`, output directory `out` và biến `NODE_VERSION=26.4.0`. Thêm biến môi trường provider dữ liệu nếu có. Dùng root directory chứa `package.json`.
-- Nếu dùng Direct Upload, chạy các lệnh sau với tên dự án Pages đã tạo.
+## Chạy production cục bộ
 
 ```powershell
-node scripts/check-project.mjs --hosting cloudflare
-npm run build
-npx wrangler pages deploy out --project-name YOUR_PAGES_PROJECT
-```
-
-## GitHub Pages
-
-Trong **Settings → Pages**, chọn source **GitHub Actions**. Với project Pages, workflow mặc định dùng `/ten-repo`. Với domain riêng hoặc repo `owner.github.io`, đặt repository variable `PAGES_BASE_PATH` thành `/`. Thêm biến môi trường provider dữ liệu trong **Settings → Secrets and variables → Actions → Variables**.
-
-Chạy **Deploy GitHub Pages** từ tab **Actions**. Workflow kiểm `project.config.json` trước khi build và triển khai. Gói GitHub cần hỗ trợ Pages cho repository private nếu dự án dùng repo private.
-
-## Firebase Hosting
-
-Tạo hoặc chọn Firebase project có bật Hosting. Build cho đường dẫn root và triển khai bằng project ID cụ thể.
-
-```powershell
-node scripts/check-project.mjs --hosting firebase
-npm run build
-npx firebase-tools login
-npx firebase-tools deploy --only hosting --project YOUR_HOSTING_PROJECT_ID
-```
-
-`firebase.json` trỏ Hosting vào `out/`. Nếu dữ liệu cũng dùng Firestore, triển khai rules vào project dữ liệu theo [hướng dẫn Firebase](firebase.md). Firebase Hosting có thể dùng chung hoặc dùng project riêng với Firestore.
-
-## Máy chủ tĩnh khác
-
-```powershell
-node scripts/check-project.mjs --hosting static
+$env:NEXT_PUBLIC_BASE_PATH = '/DatingRoutine'
 npm run build
 npm start
 ```
 
-`npm start` để xem bản build trên máy. Truyền cùng `NEXT_PUBLIC_BASE_PATH` đã dùng lúc build nếu chạy app dưới đường dẫn con. Trên host, phục vụ thư mục `out/` với `index.html` cho đường dẫn thư mục và `404.html` cho HTTP 404. Phục vụ `sw.js` dưới dạng JavaScript và đặt `Cache-Control: no-cache` cho file này nếu host cho phép cấu hình header.
+Mở http://localhost:3000/DatingRoutine/. `npm run dev` không đăng ký service worker. PWA cần HTTPS hoặc localhost; mở một lần có mạng để cache shell và font. Ảnh Cloudinary và request riêng tư không được cache trong service worker.
+
+Workflow Verify DatingRoutine chạy lint/format/types/unit/setup/SQL, build dưới subpath, Chromium + WebKit và luồng Supabase/Cloudinary mô phỏng. Workflow deploy có kiểm lint/types/unit/setup/SQL trước khi xuất bản.
